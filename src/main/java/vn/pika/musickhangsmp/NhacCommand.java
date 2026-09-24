@@ -48,67 +48,71 @@ public class NhacCommand implements CommandExecutor, TabCompleter {
                     player.sendMessage(prefix + ChatColor.YELLOW + "Ban da dang bat nhac nen roi!");
                 } else {
                     manager.setMusicEnabled(player.getUniqueId(), true);
-                    player.sendMessage(prefix + ChatColor.GREEN + "Da bat nhac nen! Ban se nghe bai hat khi he thong phat.");
+                    manager.markPlayerVerified(player.getUniqueId());
+                    player.sendMessage(prefix + ChatColor.GREEN + "Da bat nhac nen! He thong dang phat nhac cho ban.");
                     Song current = manager.getCurrentSong();
                     if (current != null && manager.isServerEnabled()) {
-                        int remaining = Math.max(0, current.getDurationSeconds() - manager.getElapsedSeconds());
-                        player.sendMessage(prefix + ChatColor.GRAY + "Hien tai dang phat: " + ChatColor.GOLD + current.getName()
-                                + ChatColor.GRAY + " (Con " + ChatColor.WHITE + remaining + "s" + ChatColor.GRAY + " cho bai ke tiep).");
+                        manager.playSongToPlayer(player, current);
+                        manager.sendNotificationToPlayer(player, current);
                     }
                 }
                 break;
 
             case "off":
-                manager.setMusicEnabled(player.getUniqueId(), false);
-                manager.stopPlayerSound(player);
-                player.sendMessage(prefix + ChatColor.RED + "Da tat nhac nen cho ban than. Go " + ChatColor.WHITE + "/nhac on" + ChatColor.RED + " bat cu luc nao de nghe lai!");
+                if (!manager.isMusicEnabled(player.getUniqueId())) {
+                    player.sendMessage(prefix + ChatColor.YELLOW + "Ban da dang tat nhac nen roi!");
+                } else {
+                    manager.setMusicEnabled(player.getUniqueId(), false);
+                    manager.stopPlayerSound(player);
+                    player.sendMessage(prefix + ChatColor.RED + "Da tat nhac nen cho rieng ban. Go " + ChatColor.WHITE + "/nhac on" + ChatColor.RED + " de bat lai bat cu luc nao.");
+                }
                 break;
 
             case "check":
-                if (!manager.isServerEnabled()) {
-                    player.sendMessage(prefix + ChatColor.RED + "He thong nhac toan server hien dang tam tat boi Admin.");
-                    return true;
-                }
-                Song current = manager.getCurrentSong();
-                if (current == null) {
-                    player.sendMessage(prefix + ChatColor.RED + "Chua co bai hat nao trong danh sach phat!");
-                    return true;
-                }
-
-                int elapsed = manager.getElapsedSeconds();
-                int total = current.getDurationSeconds();
-                int remaining = Math.max(0, total - elapsed);
                 boolean isEnabled = manager.isMusicEnabled(player.getUniqueId());
-
+                Song current = manager.getCurrentSong();
                 player.sendMessage(ChatColor.DARK_PURPLE + "════════════════ " + ChatColor.LIGHT_PURPLE + "[♫ KHANGSMP MUSIC] " + ChatColor.DARK_PURPLE + "════════════════");
                 player.sendMessage(ChatColor.WHITE + "• Trang thai ca nhan: " + (isEnabled ? ChatColor.GREEN + "Dang Bat [ON]" : ChatColor.RED + "Dang Tat [OFF]"));
-                player.sendMessage(ChatColor.WHITE + "• Bai dang phat: " + ChatColor.GOLD + current.getName());
-                player.sendMessage(ChatColor.WHITE + "• Tien do thoi gian: " + ChatColor.AQUA + Song.formatTime(elapsed) + ChatColor.GRAY + " / " + ChatColor.AQUA + Song.formatTime(total) + " " + current.getProgressBar(elapsed));
-                player.sendMessage(ChatColor.WHITE + "• Bai tiep theo sau: " + ChatColor.YELLOW + remaining + " giay");
+
+                if (!manager.isServerEnabled()) {
+                    player.sendMessage(ChatColor.YELLOW + "• He thong nhac toan server dang tam dung boi Admin.");
+                } else if (current == null) {
+                    player.sendMessage(ChatColor.YELLOW + "• Hien tai chua co bai hat nao trong danh sach phat.");
+                } else {
+                    int elapsed = manager.getElapsedSeconds();
+                    int total = current.getDurationSeconds();
+                    int remaining = Math.max(0, total - elapsed);
+                    player.sendMessage(ChatColor.WHITE + "• Bai dang phat: " + ChatColor.GOLD + current.getName());
+                    player.sendMessage(ChatColor.WHITE + "• Tien do thoi gian: " + ChatColor.AQUA + current.formatTime(elapsed) + " / " + current.getFormattedDuration()
+                            + " " + current.getProgressBar(elapsed));
+                    player.sendMessage(ChatColor.GRAY + "• Bai tiep theo sau: " + ChatColor.WHITE + remaining + " giay");
+                }
                 player.sendMessage(ChatColor.DARK_PURPLE + "═════════════════════════════════════════════════");
                 break;
 
             case "list":
-                List<Song> playlist = manager.getPlaylist();
+                List<Song> songs = manager.getPlaylist();
                 player.sendMessage(ChatColor.DARK_PURPLE + "═══════════════ " + ChatColor.LIGHT_PURPLE + "[DANH SACH 15 BAI HAT] " + ChatColor.DARK_PURPLE + "═══════════════");
-                for (int i = 0; i < playlist.size(); i++) {
-                    Song s = playlist.get(i);
-                    boolean isPlaying = (manager.getCurrentIndex() == i && manager.isServerEnabled());
-                    String marker = isPlaying ? ChatColor.GREEN + " ► " : ChatColor.DARK_GRAY + " • ";
-                    String songColor = isPlaying ? (ChatColor.GOLD + "" + ChatColor.BOLD) : ChatColor.YELLOW.toString();
-                    player.sendMessage(marker + ChatColor.WHITE + String.format("%02d. ", i + 1) + songColor + s.getName() + ChatColor.GRAY + " [" + s.getFormattedDuration() + "]");
+                for (int i = 0; i < songs.size(); i++) {
+                    Song s = songs.get(i);
+                    boolean isPlaying = (i == manager.getCurrentIndex()) && manager.isServerEnabled();
+                    String line = String.format(" %s %02d. %s [%s]",
+                            (isPlaying ? ChatColor.GOLD + "►" : ChatColor.GRAY + "•"),
+                            (i + 1),
+                            (isPlaying ? ChatColor.YELLOW + s.getName() : ChatColor.WHITE + s.getName()),
+                            ChatColor.AQUA + s.getFormattedDuration() + (isPlaying ? ChatColor.YELLOW : ChatColor.WHITE));
+                    player.sendMessage(line);
                 }
-                player.sendMessage(ChatColor.GRAY + "Go " + ChatColor.WHITE + "/nhac on" + ChatColor.GRAY + " hoac " + ChatColor.WHITE + "/nhac off" + ChatColor.GRAY + " de bat/tat am thanh.");
                 player.sendMessage(ChatColor.DARK_PURPLE + "═════════════════════════════════════════════════");
                 break;
 
             case "next":
             case "skip":
-                player.sendMessage(prefix + ChatColor.RED + "Ban khong co quyen chuyen bai! He thong phat nhac tu dong toan server khong cho phep thanh vien bo qua bai hat.");
+                player.sendMessage(prefix + ChatColor.RED + "Ban khong co quyen chuyen bai hat! He thong phat tu dong toan server.");
                 break;
 
             default:
-                player.sendMessage(prefix + ChatColor.RED + "Lenh khong hop le! Su dung: " + ChatColor.YELLOW + "/nhac on | off | check | list");
+                player.sendMessage(prefix + ChatColor.RED + "Lenh khong hop le. Go " + ChatColor.WHITE + "/nhac" + ChatColor.RED + " de xem huong dan.");
                 break;
         }
 
@@ -119,13 +123,13 @@ public class NhacCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
             List<String> list = Arrays.asList("on", "off", "check", "list");
-            List<String> result = new ArrayList<>();
+            List<String> sub = new ArrayList<>();
             for (String s : list) {
-                if (s.startsWith(args[0].toLowerCase())) {
-                    result.add(s);
+                if (s.toLowerCase().startsWith(args[0].toLowerCase())) {
+                    sub.add(s);
                 }
             }
-            return result;
+            return sub;
         }
         return new ArrayList<>();
     }

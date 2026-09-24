@@ -4,14 +4,17 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.SoundCategory;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -21,6 +24,9 @@ public class MusicManager {
     private final MusicKhangSMP plugin;
     private final List<Song> playlist = new ArrayList<>();
     private final Set<UUID> disabledPlayers = new HashSet<>();
+    private final Set<UUID> verifiedPlayers = Collections.synchronizedSet(new HashSet<>());
+    private final Map<UUID, Location> joinLocations = new ConcurrentHashMap<>();
+
     private int currentIndex = 0;
     private int elapsedSeconds = 0;
     private boolean serverEnabled = true;
@@ -134,6 +140,22 @@ public class MusicManager {
         Song song = getCurrentSong();
         if (song == null) return;
 
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (disabledPlayers.contains(p.getUniqueId())) {
+                continue;
+            }
+            // Chi phat cho nguoi choi da di chuyen >= 2 block (co trong server)
+            if (!verifiedPlayers.contains(p.getUniqueId())) {
+                continue;
+            }
+
+            playSongToPlayer(p, song);
+            sendNotificationToPlayer(p, song);
+        }
+    }
+
+    public void sendNotificationToPlayer(Player p, Song song) {
+        if (p == null || !p.isOnline() || song == null) return;
         String prefix = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("prefix", "&d[&e♫ KhangSMP&d] &7"));
         String notifyType = plugin.getConfig().getString("notify-type", "BOTH").toUpperCase();
         String rawMsg = plugin.getConfig().getString("notify-message", "&fDang phat: &e{song_name} &7[{duration}]");
@@ -141,19 +163,11 @@ public class MusicManager {
                 .replace("{song_name}", song.getName())
                 .replace("{duration}", song.getFormattedDuration()));
 
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            if (disabledPlayers.contains(p.getUniqueId())) {
-                continue;
-            }
-
-            playSongToPlayer(p, song);
-
-            if (notifyType.equals("BOTH") || notifyType.equals("CHAT")) {
-                p.sendMessage(prefix + formattedMsg);
-            }
-            if (notifyType.equals("BOTH") || notifyType.equals("ACTIONBAR")) {
-                sendActionBar(p, prefix + formattedMsg);
-            }
+        if (notifyType.equals("BOTH") || notifyType.equals("CHAT")) {
+            p.sendMessage(prefix + formattedMsg);
+        }
+        if (notifyType.equals("BOTH") || notifyType.equals("ACTIONBAR")) {
+            sendActionBar(p, prefix + formattedMsg);
         }
     }
 
@@ -178,16 +192,17 @@ public class MusicManager {
             p.stopSound(SoundCategory.RECORDS);
         } catch (Throwable ignored) {}
 
-        boolean isBedrock = isBedrockPlayer(p.getUniqueId());
+        boolean isBedrock = isBedrockPlayer(p);
         String soundKey = isBedrock ? song.getBedrockSound() : song.getJavaSound();
 
         try {
             p.playSound(p.getLocation(), soundKey, SoundCategory.RECORDS, 1000000.0f, 1.0f);
-        } catch (Throwable t) {
-            // Fallback sang lenh console
+        } catch (Throwable ignored) {}
+
+        try {
             String cmd = String.format("execute at %s run playsound %s record %s ~ ~ ~ 1000000 1", p.getName(), soundKey, p.getName());
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
-        }
+        } catch (Throwable ignored) {}
     }
 
     public void stopPlayerSound(Player p) {
@@ -195,8 +210,9 @@ public class MusicManager {
             try {
                 p.stopSound(SoundCategory.RECORDS);
             } catch (Throwable ignored) {}
-            // Fallback stopsound console
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "stopsound " + p.getName() + " record");
+            try {
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "stopsound " + p.getName() + " record");
+            } catch (Throwable ignored) {}
         }
     }
 
@@ -219,13 +235,79 @@ public class MusicManager {
         saveDisabledPlayers();
     }
 
-    private boolean isBedrockPlayer(UUID uuid) {
+    // --- LOGIC DI CHUYEN 2 BLOCK ---
+    public void markPlayerJoined(Player player) {
+        UUID uuid = player.getUniqueId();
+        verifiedPlayers.remove(uuid);
+        joinLocations.put(uuid, player.getLocation().clone());
+    }
+
+    public void markPlayerQuit(Player player) {
+        UUID uuid = player.getUniqueId();
+        verifiedPlayers.remove(uuid);
+        joinLocations.remove(uuid);
+        stopPlayerSound(player);
+    }
+
+    public boolean isPlayerVerified(UUID uuid) {
+        return verifiedPlayers.contains(uuid);
+    }
+
+    public void markPlayerVerified(UUID uuid) {
+        verifiedPlayers.add(uuid);
+        joinLocations.remove(uuid);
+    }
+
+    public void handlePlayerMove(Player player, Location to) {
+        UUID uuid = player.getUniqueId();
+        if (verifiedPlayers.contains(uuid)) {
+            return;
+        }
+
+        Location joinLoc = joinLocations.get(uuid);
+        if (joinLoc == null) {
+            joinLocations.put(uuid, to.clone());
+            return;
+        }
+
+        if (to.getWorld() != null && !to.getWorld().equals(joinLoc.getWorld())) {
+            joinLocations.put(uuid, to.clone());
+            return;
+        }
+
+        double dx = to.getX() - joinLoc.getX();
+        double dy = to.getY() - joinLoc.getY();
+        double dz = to.getZ() - joinLoc.getZ();
+        double distSq = dx * dx + dy * dy + dz * dz;
+
+        // Di chuyen >= 2 block (2^2 = 4) -> da thuc su load xong trong the gioi!
+        if (distSq >= 4.0) {
+            verifiedPlayers.add(uuid);
+            joinLocations.remove(uuid);
+            plugin.getLogger().info("Nguoi choi " + player.getName() + " da di chuyen >= 2 block -> Xac thuc co trong server!");
+
+            if (serverEnabled && !disabledPlayers.contains(uuid)) {
+                Song current = getCurrentSong();
+                if (current != null) {
+                    playSongToPlayer(player, current);
+                    sendNotificationToPlayer(player, current);
+                }
+            }
+        }
+    }
+
+    public boolean isBedrockPlayer(Player player) {
+        if (player == null) return false;
+        String name = player.getName();
+        if (name.startsWith("PE_") || name.startsWith(".")) {
+            return true;
+        }
         try {
             Class<?> floodgateApiClass = Class.forName("org.geysermc.floodgate.api.FloodgateApi");
             Method getInstanceMethod = floodgateApiClass.getMethod("getInstance");
             Object apiInstance = getInstanceMethod.invoke(null);
             Method isFloodgateMethod = floodgateApiClass.getMethod("isFloodgatePlayer", UUID.class);
-            return (boolean) isFloodgateMethod.invoke(apiInstance, uuid);
+            return (boolean) isFloodgateMethod.invoke(apiInstance, player.getUniqueId());
         } catch (Throwable ignored) {
             return false;
         }
@@ -248,7 +330,7 @@ public class MusicManager {
     }
 
     public List<Song> getPlaylist() {
-        return playlist;
+        return Collections.unmodifiableList(playlist);
     }
 
     public int getCurrentIndex() {

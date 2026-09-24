@@ -1,11 +1,13 @@
 package vn.pika.musickhangsmp;
 
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 
 public class MusicListener implements Listener {
     private final MusicKhangSMP plugin;
@@ -16,23 +18,28 @@ public class MusicListener implements Listener {
         this.manager = manager;
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        String prefix = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("prefix", "&d[&e♫ KhangSMP&d] &7"));
+        manager.markPlayerJoined(player);
+    }
 
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (!player.isOnline()) return;
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onPlayerMove(PlayerMoveEvent event) {
+        Location from = event.getFrom();
+        Location to = event.getTo();
+        if (to == null) return;
 
-            if (manager.isMusicEnabled(player.getUniqueId()) && manager.isServerEnabled()) {
-                Song current = manager.getCurrentSong();
-                if (current != null) {
-                    int remaining = Math.max(0, current.getDurationSeconds() - manager.getElapsedSeconds());
-                    player.sendMessage(prefix + ChatColor.GRAY + "He thong dang phat: " + ChatColor.GOLD + current.getName()
-                            + ChatColor.GRAY + " (Con " + ChatColor.WHITE + remaining + "s" + ChatColor.GRAY + " se sang bai moi).");
-                    player.sendMessage(prefix + ChatColor.DARK_GRAY + "Go " + ChatColor.WHITE + "/nhac off" + ChatColor.DARK_GRAY + " neu ban khong muon nghe.");
-                }
-            }
-        }, 60L); // 3 giay sau khi join
+        // Chi kiem tra khi buoc sang block khac (tiet kiem CPU toi da)
+        if (from.getBlockX() == to.getBlockX() && from.getBlockY() == to.getBlockY() && from.getBlockZ() == to.getBlockZ()) {
+            return;
+        }
+
+        manager.handlePlayerMove(event.getPlayer(), to);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        manager.markPlayerQuit(event.getPlayer());
     }
 }
