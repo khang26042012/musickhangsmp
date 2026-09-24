@@ -1,0 +1,25 @@
+name: MusicKhangSMP
+version: 1.0.0
+main: vn.pika.musickhangsmp.MusicKhangSMP
+api-version: "1.20"
+author: KhangSMP
+description: 'He thong phat nhac nen tu dong toan server KhangSMP'
+website: https://pikamc.vn
+commands:
+  nhac:
+    description: 'Bat / tat va kiem tra thong tin nhac nen cho ban than'
+    usage: '/nhac [on|off|check|list]'
+    aliases: [music, baihat]
+    permission: musickhangsmp.use
+  nhacad:
+    description: 'Quan tri he thong nhac nen toan may chu'
+    usage: '/nhacad [on|off|next|check|list|reload]'
+    aliases: [musicadmin, nhacadmin]
+    permission: musickhangsmp.admin
+permissions:
+  musickhangsmp.use:
+    description: 'Cho phep su dung lenh /nhac'
+    default: true
+  musickhangsmp.admin:
+    description: 'Cho phep quan tri nhac /nhacad'
+    default: op

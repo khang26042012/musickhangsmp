@@ -1,0 +1,108 @@
+# ==============================================================================
+# CẤU HÌNH HỆ THỐNG PHÁT NHẠC TỰ ĐỘNG KHANGSMP - MusicKhangSMP
+# Tác giả: KhangSMP | Server PikaMC Paper 1.21.4
+# ==============================================================================
+
+# Tự động phát nhạc khi máy chủ khởi động
+auto-start: true
+
+# Tiền tố hiển thị trong khung chat
+prefix: "&d[&e♫ KhangSMP&d] &7"
+
+# Kiểu thông báo khi bài hát mới bắt đầu phát (CHAT, ACTIONBAR, hoặc BOTH)
+notify-type: "BOTH"
+
+# Thông báo khi chuyển bài hát
+notify-message: "&fĐang phát: &e{song_name} &7[{duration}]"
+
+# Danh sách 15 bài hát trong hệ thống (Tự động xoay vòng liên tục)
+playlist:
+  - id: "01_tinh_ve"
+    name: "Tinh Vệ (Bản Hí, Hợp Xướng)"
+    duration: 259
+    java-sound: "pikaradio:pikaradio.01_tinh_ve"
+    bedrock-sound: "radio.01_tinh_ve"
+
+  - id: "02_day_bien"
+    name: "Đáy Biển (Hải Đới)"
+    duration: 255
+    java-sound: "pikaradio:pikaradio.02_day_bien"
+    bedrock-sound: "radio.02_day_bien"
+
+  - id: "03_xich_linh"
+    name: "Xích Linh (Lý Ngọc Cương)"
+    duration: 297
+    java-sound: "pikaradio:pikaradio.03_xich_linh"
+    bedrock-sound: "radio.03_xich_linh"
+
+  - id: "04_rainy_love_dj"
+    name: "Rainy Love (DJ Remix)"
+    duration: 197
+    java-sound: "pikaradio:pikaradio.04_rainy_love_dj"
+    bedrock-sound: "radio.04_rainy_love_dj"
+
+  - id: "05_tu_khoa_dj"
+    name: "Từ Khóa (DJ Remix)"
+    duration: 303
+    java-sound: "pikaradio:pikaradio.05_tu_khoa_dj"
+    bedrock-sound: "radio.05_tu_khoa_dj"
+
+  - id: "06_bien_dao_va_em"
+    name: "Biển, Đảo Và Em"
+    duration: 51
+    java-sound: "pikaradio:pikaradio.06_bien_dao_va_em"
+    bedrock-sound: "radio.06_bien_dao_va_em"
+
+  - id: "07_tu_cuu_mon_hoi_uc"
+    name: "Từ Cửu Môn Hồi Ức (Giải Ngữ Hoa)"
+    duration: 230
+    java-sound: "pikaradio:pikaradio.07_tu_cuu_mon_hoi_uc"
+    bedrock-sound: "radio.07_tu_cuu_mon_hoi_uc"
+
+  - id: "08_thanh_y"
+    name: "Thanh Y (Cổ Phong Hí Khúc)"
+    duration: 251
+    java-sound: "pikaradio:pikaradio.08_thanh_y"
+    bedrock-sound: "radio.08_thanh_y"
+
+  - id: "09_du_kinh"
+    name: "Du Kinh (Du Kinh Ký)"
+    duration: 358
+    java-sound: "pikaradio:pikaradio.09_du_kinh"
+    bedrock-sound: "radio.09_du_kinh"
+
+  - id: "10_lucky_go_girl"
+    name: "Lucky Go Girl"
+    duration: 319
+    java-sound: "pikaradio:pikaradio.10_lucky_go_girl"
+    bedrock-sound: "radio.10_lucky_go_girl"
+
+  - id: "11_illusionary_daytime_trackmaker"
+    name: "Illusionary Daytime x Trackmaker"
+    duration: 146
+    java-sound: "pikaradio:pikaradio.11_illusionary_daytime_trackmaker"
+    bedrock-sound: "radio.11_illusionary_daytime_trackmaker"
+
+  - id: "12_cry_for_me"
+    name: "Cry For Me (Michita ft. Ami)"
+    duration: 299
+    java-sound: "pikaradio:pikaradio.12_cry_for_me"
+    bedrock-sound: "radio.12_cry_for_me"
+
+  - id: "13_dao_khong_nguoi_remix"
+    name: "Đảo Không Người (MinhXT2nd Remix)"
+    duration: 227
+    java-sound: "pikaradio:pikaradio.13_dao_khong_nguoi_remix"
+    bedrock-sound: "radio.13_dao_khong_nguoi_remix"
+
+  - id: "14_powfu_death_bed"
+    name: "Powfu - death bed (Slowed + Reverb)"
+    duration: 233
+    java-sound: "pikaradio:pikaradio.14_powfu_death_bed"
+    bedrock-sound: "radio.14_powfu_death_bed"
+
+  - id: "15_take_me_hand"
+    name: "Take Me Hand (DAISHI DANCE ft. Cécile)"
+    duration: 320
+    java-sound: "pikaradio:pikaradio.15_take_me_hand"
+    bedrock-sound: "radio.15_take_me_hand"
