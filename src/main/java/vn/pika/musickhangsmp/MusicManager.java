@@ -129,9 +129,12 @@ public class MusicManager {
 
     public void nextSong() {
         if (playlist.isEmpty()) return;
+        // Dung toan bo bai hat cu truoc
+        stopAllSounds();
         currentIndex = (currentIndex + 1) % playlist.size();
         elapsedSeconds = 0;
-        playCurrentSong();
+        // Gian cach 2 giay de am thanh sach se truoc khi phat bai tiep theo
+        Bukkit.getScheduler().runTaskLater(plugin, this::playCurrentSong, 40L);
     }
 
     public void playCurrentSong() {
@@ -188,17 +191,13 @@ public class MusicManager {
 
     public void playSongToPlayer(Player p, Song song) {
         if (p == null || !p.isOnline() || song == null) return;
-        try {
-            p.stopSound(SoundCategory.RECORDS);
-        } catch (Throwable ignored) {}
+        // Triet de dung tat ca am thanh cu cua nguoi choi truoc khi phat bai moi
+        stopPlayerSound(p);
 
         boolean isBedrock = isBedrockPlayer(p);
         String soundKey = isBedrock ? song.getBedrockSound() : song.getJavaSound();
 
-        try {
-            p.playSound(p.getLocation(), soundKey, SoundCategory.RECORDS, 1000000.0f, 1.0f);
-        } catch (Throwable ignored) {}
-
+        // Phat bang duy nhat 1 kenh execute console de Java va Bedrock khong bi trung lap tieng
         try {
             String cmd = String.format("execute at %s run playsound %s record %s ~ ~ ~ 1000000 1", p.getName(), soundKey, p.getName());
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
@@ -209,16 +208,27 @@ public class MusicManager {
         if (p != null && p.isOnline()) {
             try {
                 p.stopSound(SoundCategory.RECORDS);
+                p.stopSound(SoundCategory.MUSIC);
             } catch (Throwable ignored) {}
             try {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "stopsound " + p.getName() + " record");
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "stopsound " + p.getName() + " music");
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "stopsound " + p.getName());
             } catch (Throwable ignored) {}
         }
     }
 
     public void stopAllSounds() {
+        try {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "stopsound @a record");
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "stopsound @a music");
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "stopsound @a");
+        } catch (Throwable ignored) {}
         for (Player p : Bukkit.getOnlinePlayers()) {
-            stopPlayerSound(p);
+            try {
+                p.stopSound(SoundCategory.RECORDS);
+                p.stopSound(SoundCategory.MUSIC);
+            } catch (Throwable ignored) {}
         }
     }
 
